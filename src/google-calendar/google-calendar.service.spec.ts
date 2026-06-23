@@ -118,7 +118,7 @@ describe('GoogleCalendarService', () => {
           items: [
             {
               start: { dateTime: '2026-06-23T08:00:00Z' },
-              end: { dateTime: '2026-06-23T11:00:00Z' },
+              end: { dateTime: '2026-06-24T11:00:00Z' },
             },
           ],
         },
@@ -144,7 +144,7 @@ describe('GoogleCalendarService', () => {
             { start: { date: '2026-06-23' }, end: { date: '2026-06-24' } },
             {
               start: { dateTime: '2026-06-23T14:00:00Z' },
-              end: { dateTime: '2026-06-23T17:00:00Z' },
+              end: { dateTime: '2026-06-24T17:00:00Z' },
             },
           ],
         },

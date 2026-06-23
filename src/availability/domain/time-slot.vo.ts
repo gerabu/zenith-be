@@ -1,4 +1,5 @@
-const TIME_SLOT_MAX_HOURS = 2;
+const TIME_SLOT_MAX_HOURS = 24;
+const TIME_SLOT_MIN_MINUTES = 15;
 
 type TimeSlotProps = {
   start: Date;
@@ -29,11 +30,23 @@ export class TimeSlot {
       );
     }
 
+    const durationMins = (props.end.getTime() - props.start.getTime()) / 60000;
+    if (durationMins < TIME_SLOT_MIN_MINUTES) {
+      throw new Error(`A time slot cannot be less than ${TIME_SLOT_MIN_MINUTES} minutes (got ${durationMins})`);
+    }
+
     this.start = props.start;
     this.end = props.end;
   }
 
   overlaps(other: TimeSlot): boolean {
     return this.start < other.end && other.start < this.end;
+  }
+
+  toPrimitives() {
+    return {
+      start: new Date(this.start.getTime()),
+      end: new Date(this.end.getTime()),
+    };
   }
 }

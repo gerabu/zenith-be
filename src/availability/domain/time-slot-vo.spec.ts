@@ -41,14 +41,24 @@ describe('TimeSlot', () => {
     ).toThrow('A time slot must have a duration greater than zero');
   });
 
-  it('rejects a slot longer than two hours', () => {
+  it('rejects a slot longer than twenty-four hours', () => {
     expect(
       () =>
         new TimeSlot({
           start: new Date('2026-06-12T14:00:00'),
-          end: new Date('2026-06-12T17:00:00'),
+          end: new Date('2026-07-12T17:00:00'),
         }),
-    ).toThrow(/cannot exceed 2 hours/);
+    ).toThrow(/cannot exceed 24 hours/);
+  });
+
+  it('rejects a slot less than fifteen minutes', () => {
+    expect(
+      () =>
+        new TimeSlot({
+          start: new Date('2026-06-12T14:00:00'),
+          end: new Date('2026-06-12T14:14:00'),
+        }),
+    ).toThrow(/cannot be less than 15 minutes/);
   });
 
   describe('overlaps', () => {
