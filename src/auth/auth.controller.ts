@@ -3,8 +3,8 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UserResponseDto } from './dto/user-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { AuthenticatedUser } from './interfaces/authenticated-user.interface';
-import { USER_REPOSITORY } from './interfaces/user-repository.interface';
 import type { IUserRepository } from './interfaces/user-repository.interface';
+import { USER_REPOSITORY } from './interfaces/user-repository.interface';
 
 @Controller('auth')
 export class AuthController {

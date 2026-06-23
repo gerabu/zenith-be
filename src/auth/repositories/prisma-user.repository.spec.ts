@@ -15,6 +15,9 @@ describe('PrismaUserRepository', () => {
     googleId: principal.googleId,
     email: principal.email,
     name: principal.name ?? null,
+    calendarConnected: false,
+    googleAccessToken: null,
+    googleRefreshToken: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

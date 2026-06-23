@@ -11,7 +11,7 @@ export class TimeSlot {
 
   constructor(props: TimeSlotProps) {
     if (props.end.getTime() === props.start.getTime()) {
-      throw new Error("A time slot must have a duration greater than zero");
+      throw new Error('A time slot must have a duration greater than zero');
     }
 
     if (props.end < props.start) {

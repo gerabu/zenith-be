@@ -8,10 +8,13 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  googleId  String   @unique
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String   @id @default(uuid())
+  googleId           String   @unique
+  email              String   @unique
+  name               String?
+  calendarConnected  Boolean  @default(false)
+  googleAccessToken  String?
+  googleRefreshToken String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
