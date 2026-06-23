@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: zenith-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-zenith}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-zenith}
+      POSTGRES_DB: ${POSTGRES_DB:-zenith}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - zenith-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-zenith} -d ${POSTGRES_DB:-zenith}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  zenith-pgdata:
