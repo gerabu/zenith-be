@@ -1,0 +1,97 @@
+import { Booking } from '@prisma/client';
+import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaBookingRepository } from './prisma-booking.repository';
+
+function makeBooking(overrides: Partial<Booking> = {}): Booking {
+  return {
+    id: 'booking-uuid',
+    userId: 'user-uuid',
+    title: 'Test Booking',
+    startTime: new Date('2026-06-25T10:00:00Z'),
+    endTime: new Date('2026-06-25T11:00:00Z'),
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
+describe('PrismaBookingRepository', () => {
+  let findManyMock: jest.Mock;
+  let createMock: jest.Mock;
+  let repository: PrismaBookingRepository;
+
+  beforeEach(() => {
+    findManyMock = jest.fn();
+    createMock = jest.fn();
+    const prisma = {
+      booking: { findMany: findManyMock, create: createMock },
+    } as unknown as PrismaService;
+    repository = new PrismaBookingRepository(prisma);
+  });
+
+  describe('findByUserAndDate', () => {
+    const userId = 'user-uuid';
+    const date = new Date('2026-06-25T12:00:00Z');
+
+    it('queries within the UTC calendar day boundaries', async () => {
+      findManyMock.mockResolvedValue([]);
+
+      await repository.findByUserAndDate(userId, date);
+
+      expect(findManyMock).toHaveBeenCalledWith({
+        where: {
+          userId,
+          startTime: {
+            gte: new Date('2026-06-25T00:00:00.000Z'),
+            lt: new Date('2026-06-26T00:00:00.000Z'),
+          },
+        },
+      });
+    });
+
+    it('returns bookings that fall within the day', async () => {
+      const booking = makeBooking();
+      findManyMock.mockResolvedValue([booking]);
+
+      const result = await repository.findByUserAndDate(userId, date);
+
+      expect(result).toEqual([booking]);
+    });
+
+    it('returns empty array when user has no bookings on the day', async () => {
+      findManyMock.mockResolvedValue([]);
+
+      const result = await repository.findByUserAndDate(userId, date);
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('create', () => {
+    const input = {
+      userId: 'user-uuid',
+      title: 'Team Sync',
+      startTime: new Date('2026-06-25T14:00:00Z'),
+      endTime: new Date('2026-06-25T15:00:00Z'),
+    };
+
+    it('calls prisma.booking.create with the provided input', async () => {
+      const created = makeBooking({ title: 'Team Sync' });
+      createMock.mockResolvedValue(created);
+
+      await repository.create(input);
+
+      expect(createMock).toHaveBeenCalledWith({ data: input });
+    });
+
+    it('returns the created booking record including generated id', async () => {
+      const created = makeBooking({ id: 'generated-uuid', title: 'Team Sync' });
+      createMock.mockResolvedValue(created);
+
+      const result = await repository.create(input);
+
+      expect(result.id).toBe('generated-uuid');
+      expect(result).toEqual(created);
+    });
+  });
+});
