@@ -1,0 +1,25 @@
+name: Deploy to AWS Elastic Beanstalk
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with: { node-version: '20' }
+      - run: npm ci
+      - run: npx prisma generate
+      - run: npm run build
+      - run: zip -r deploy.zip dist node_modules package.json prisma Procfile
+      - uses: einaregilsson/beanstalk-deploy@v21
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: "Zenith"
+          environment_name: "Zenith-env"
+          version_label: "deploy-${{ github.sha }}"
+          region: "us-east-1"
+          deployment_package: deploy.zip
