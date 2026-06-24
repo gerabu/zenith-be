@@ -33,7 +33,8 @@ jobs:
         run: pnpm run build
 
       - name: Generate deployment package
-        run: zip -r deploy.zip dist node_modules package.json pnpm-lock.yaml prisma Procfile
+        run: |
+          zip -r deploy.zip dist/ package.json pnpm-lock.yaml prisma/ Procfile
 
       - name: Deploy to AWS Elastic Beanstalk
         uses: einaregilsson/beanstalk-deploy@v21
