@@ -17,7 +17,9 @@ export class DailyAvailability {
     }));
 
     this.busySlots = [...mappedBookings, ...mappedExternal].sort(
-      (a, b) => a.slot.toPrimitives().start.getTime() - b.slot.toPrimitives().start.getTime(),
+      (a, b) =>
+        a.slot.toPrimitives().start.getTime() -
+        b.slot.toPrimitives().start.getTime(),
     );
   }
 

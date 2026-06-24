@@ -23,11 +23,15 @@ describe('PrismaUserRepository', () => {
   };
 
   let upsertMock: jest.Mock;
+  let updateMock: jest.Mock;
   let repository: PrismaUserRepository;
 
   beforeEach(() => {
     upsertMock = jest.fn();
-    const prisma = { user: { upsert: upsertMock } } as unknown as PrismaService;
+    updateMock = jest.fn();
+    const prisma = {
+      user: { upsert: upsertMock, update: updateMock },
+    } as unknown as PrismaService;
     repository = new PrismaUserRepository(prisma);
   });
 
@@ -67,5 +71,50 @@ describe('PrismaUserRepository', () => {
     for (const [arg] of calls) {
       expect(arg.where).toEqual({ googleId: principal.googleId });
     }
+  });
+
+  describe('updateCalendarConnection', () => {
+    const connectedUser: User = {
+      ...baseUser,
+      calendarConnected: true,
+      googleAccessToken: 'at-token',
+    };
+
+    it('sets accessToken, calendarConnected, and refreshToken when all tokens provided', async () => {
+      updateMock.mockResolvedValue({
+        ...connectedUser,
+        googleRefreshToken: 'rt-token',
+      });
+
+      await repository.updateCalendarConnection(principal.googleId, {
+        accessToken: 'at-token',
+        refreshToken: 'rt-token',
+      });
+
+      expect(updateMock).toHaveBeenCalledWith({
+        where: { googleId: principal.googleId },
+        data: {
+          googleAccessToken: 'at-token',
+          calendarConnected: true,
+          googleRefreshToken: 'rt-token',
+        },
+      });
+    });
+
+    it('omits googleRefreshToken from the update payload when refreshToken is absent', async () => {
+      updateMock.mockResolvedValue(connectedUser);
+
+      await repository.updateCalendarConnection(principal.googleId, {
+        accessToken: 'at-token',
+      });
+
+      expect(updateMock).toHaveBeenCalledWith({
+        where: { googleId: principal.googleId },
+        data: {
+          googleAccessToken: 'at-token',
+          calendarConnected: true,
+        },
+      });
+    });
   });
 });

@@ -1,5 +1,14 @@
-import { Controller, Get, Inject, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { CalendarConnectionResponseDto } from './dto/calendar-connection-response.dto';
+import { ConnectCalendarDto } from './dto/connect-calendar.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { AuthenticatedUser } from './interfaces/authenticated-user.interface';
@@ -21,5 +30,18 @@ export class AuthController {
   ): Promise<UserResponseDto> {
     const user = await this.userRepository.upsert(principal);
     return UserResponseDto.fromUser(user);
+  }
+
+  @Patch('calendar-connection')
+  @UseGuards(JwtAuthGuard)
+  async connectCalendar(
+    @CurrentUser() principal: AuthenticatedUser,
+    @Body() dto: ConnectCalendarDto,
+  ): Promise<CalendarConnectionResponseDto> {
+    await this.userRepository.updateCalendarConnection(principal.googleId, {
+      accessToken: dto.accessToken,
+      refreshToken: dto.refreshToken,
+    });
+    return CalendarConnectionResponseDto.connected();
   }
 }

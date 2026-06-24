@@ -9,4 +9,9 @@ export interface IUserRepository {
   upsert(principal: AuthenticatedUser): Promise<User>;
 
   findByGoogleId(googleId: string): Promise<User | null>;
+
+  updateCalendarConnection(
+    googleId: string,
+    tokens: { accessToken: string; refreshToken?: string },
+  ): Promise<User>;
 }

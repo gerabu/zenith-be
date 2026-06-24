@@ -1,4 +1,11 @@
-import { ArgumentsHost, Catch, ExceptionFilter, HttpException, HttpStatus, Logger } from '@nestjs/common';
+import {
+  ArgumentsHost,
+  Catch,
+  ExceptionFilter,
+  HttpException,
+  HttpStatus,
+  Logger,
+} from '@nestjs/common';
 import { Response } from 'express';
 
 @Catch()
@@ -15,12 +22,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
       const message =
         typeof exceptionResponse === 'string'
           ? exceptionResponse
-          : (exceptionResponse as Record<string, unknown>).message?.toString() ?? exception.message;
+          : ((
+              exceptionResponse as Record<string, unknown>
+            ).message?.toString() ?? exception.message);
 
       response.status(status).json({ success: false, error: message });
     } else {
-      this.logger.error('Unhandled exception', exception instanceof Error ? exception.stack : String(exception));
-      response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({ success: false, error: 'Internal server error' });
+      this.logger.error(
+        'Unhandled exception',
+        exception instanceof Error ? exception.stack : String(exception),
+      );
+      response
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json({ success: false, error: 'Internal server error' });
     }
   }
 }

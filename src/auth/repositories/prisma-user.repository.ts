@@ -20,4 +20,20 @@ export class PrismaUserRepository implements IUserRepository {
   findByGoogleId(googleId: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { googleId } });
   }
+
+  updateCalendarConnection(
+    googleId: string,
+    tokens: { accessToken: string; refreshToken?: string },
+  ): Promise<User> {
+    return this.prisma.user.update({
+      where: { googleId },
+      data: {
+        googleAccessToken: tokens.accessToken,
+        calendarConnected: true,
+        ...(tokens.refreshToken !== undefined && {
+          googleRefreshToken: tokens.refreshToken,
+        }),
+      },
+    });
+  }
 }

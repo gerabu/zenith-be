@@ -32,7 +32,9 @@ export class TimeSlot {
 
     const durationMins = (props.end.getTime() - props.start.getTime()) / 60000;
     if (durationMins < TIME_SLOT_MIN_MINUTES) {
-      throw new Error(`A time slot cannot be less than ${TIME_SLOT_MIN_MINUTES} minutes (got ${durationMins})`);
+      throw new Error(
+        `A time slot cannot be less than ${TIME_SLOT_MIN_MINUTES} minutes (got ${durationMins})`,
+      );
     }
 
     this.start = props.start;
