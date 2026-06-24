@@ -12,5 +12,6 @@ import { GoogleJwtStrategy } from './strategies/google-jwt.strategy';
     GoogleJwtStrategy,
     { provide: USER_REPOSITORY, useClass: PrismaUserRepository },
   ],
+  exports: [USER_REPOSITORY],
 })
 export class AuthModule {}

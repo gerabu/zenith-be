@@ -8,13 +8,25 @@ datasource db {
 }
 
 model User {
-  id                 String   @id @default(uuid())
-  googleId           String   @unique
-  email              String   @unique
+  id                 String    @id @default(uuid())
+  googleId           String    @unique
+  email              String    @unique
   name               String?
-  calendarConnected  Boolean  @default(false)
+  calendarConnected  Boolean   @default(false)
   googleAccessToken  String?
   googleRefreshToken String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  bookings           Booking[]
+}
+
+model Booking {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  startTime DateTime
+  endTime   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
