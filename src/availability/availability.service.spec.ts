@@ -3,6 +3,7 @@ import { Booking, User } from '@prisma/client';
 import { IUserRepository } from '../auth/interfaces/user-repository.interface';
 import { ICalendarProvider } from '../google-calendar/interfaces/calendar-provider.interface';
 import { IBookingRepository } from '../bookings/interfaces/booking-repository.interface';
+import { TimeSlot } from './domain/time-slot.vo';
 import { AvailabilityService } from './availability.service';
 
 function makeUser(overrides: Partial<User> = {}): User {
@@ -14,6 +15,19 @@ function makeUser(overrides: Partial<User> = {}): User {
     calendarConnected: true,
     googleAccessToken: 'access-token',
     googleRefreshToken: 'refresh-token',
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
+}
+
+function makeBooking(overrides: Partial<Booking> = {}): Booking {
+  return {
+    id: 'booking-uuid',
+    userId: 'user-uuid',
+    title: 'Booking',
+    startTime: new Date('2026-06-25T09:00:00.000Z'),
+    endTime: new Date('2026-06-25T10:00:00.000Z'),
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -100,5 +114,52 @@ describe('AvailabilityService', () => {
     await expect(
       service.getTimeline('google-sub-123', '2026-06-25'),
     ).rejects.toThrow(NotFoundException);
+  });
+
+  it('surfaces booking titles and calendar event titles on busy blocks', async () => {
+    findByUserAndDate.mockResolvedValue([
+      makeBooking({
+        title: 'Dentist',
+        startTime: new Date('2026-06-25T09:00:00.000Z'),
+        endTime: new Date('2026-06-25T10:00:00.000Z'),
+      }),
+    ]);
+    getEventsForDate.mockResolvedValue([
+      {
+        slot: new TimeSlot({
+          start: new Date('2026-06-25T14:00:00.000Z'),
+          end: new Date('2026-06-25T15:00:00.000Z'),
+        }),
+        title: 'Team sync',
+      },
+    ]);
+
+    const timeline = await service.getTimeline('google-sub-123', '2026-06-25');
+
+    const booked = timeline.find((b) => b.status === 'booked');
+    const external = timeline.find((b) => b.status === 'external');
+    expect(booked?.title).toBe('Dentist');
+    expect(external?.title).toBe('Team sync');
+    expect(
+      timeline
+        .filter((b) => b.status === 'available')
+        .every((b) => !Object.prototype.hasOwnProperty.call(b, 'title')),
+    ).toBe(true);
+  });
+
+  it('emits an empty title for a booking with no title', async () => {
+    findByUserAndDate.mockResolvedValue([
+      makeBooking({
+        title: '',
+        startTime: new Date('2026-06-25T09:00:00.000Z'),
+        endTime: new Date('2026-06-25T10:00:00.000Z'),
+      }),
+    ]);
+
+    const timeline = await service.getTimeline('google-sub-123', '2026-06-25');
+
+    const booked = timeline.find((b) => b.status === 'booked');
+    expect(booked).toBeDefined();
+    expect(booked?.title).toBe('');
   });
 });

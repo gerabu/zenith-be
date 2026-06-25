@@ -4,13 +4,19 @@ import { User } from '@prisma/client';
 import { calendar_v3, google } from 'googleapis';
 import { TimeSlot } from '../availability/domain/time-slot.vo';
 import { DayWindow } from '../common/timezone/day-window';
-import { ICalendarProvider } from './interfaces/calendar-provider.interface';
+import {
+  CalendarEvent,
+  ICalendarProvider,
+} from './interfaces/calendar-provider.interface';
 
 @Injectable()
 export class GoogleCalendarService implements ICalendarProvider {
   constructor(private readonly config: ConfigService) {}
 
-  async getEventsForDate(user: User, window: DayWindow): Promise<TimeSlot[]> {
+  async getEventsForDate(
+    user: User,
+    window: DayWindow,
+  ): Promise<CalendarEvent[]> {
     if (
       !user.calendarConnected ||
       !user.googleAccessToken ||
@@ -50,16 +56,22 @@ export class GoogleCalendarService implements ICalendarProvider {
     return this.mapEventsToTimeSlots(items);
   }
 
-  private mapEventsToTimeSlots(events: calendar_v3.Schema$Event[]): TimeSlot[] {
-    const slots: TimeSlot[] = [];
+  private mapEventsToTimeSlots(
+    events: calendar_v3.Schema$Event[],
+  ): CalendarEvent[] {
+    const slots: CalendarEvent[] = [];
     for (const event of events) {
       const startStr = event.start?.dateTime;
       const endStr = event.end?.dateTime;
       if (!startStr || !endStr) continue;
       try {
-        slots.push(
-          new TimeSlot({ start: new Date(startStr), end: new Date(endStr) }),
-        );
+        slots.push({
+          slot: new TimeSlot({
+            start: new Date(startStr),
+            end: new Date(endStr),
+          }),
+          title: event.summary ?? '',
+        });
       } catch {
         // Skip events that violate TimeSlot invariants (zero-length, reversed, >2h).
       }

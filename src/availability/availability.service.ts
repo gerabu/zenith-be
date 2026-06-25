@@ -5,15 +5,22 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { User } from '@prisma/client';
+import { Booking, User } from '@prisma/client';
 import { BOOKING_REPOSITORY } from '../bookings/interfaces/booking-repository.interface';
 import type { IBookingRepository } from '../bookings/interfaces/booking-repository.interface';
 import { CALENDAR_PROVIDER } from '../google-calendar/interfaces/calendar-provider.interface';
-import type { ICalendarProvider } from '../google-calendar/interfaces/calendar-provider.interface';
+import type {
+  CalendarEvent,
+  ICalendarProvider,
+} from '../google-calendar/interfaces/calendar-provider.interface';
 import { USER_REPOSITORY } from '../auth/interfaces/user-repository.interface';
 import type { IUserRepository } from '../auth/interfaces/user-repository.interface';
 import { DayWindow, getDayWindow } from '../common/timezone/day-window';
-import { DailyAvailability, TimelineBlock } from './domain/daily-availability';
+import {
+  BusySlot,
+  DailyAvailability,
+  TimelineBlock,
+} from './domain/daily-availability';
 import { TimeSlot } from './domain/time-slot.vo';
 
 @Injectable()
@@ -49,9 +56,7 @@ export class AvailabilityService {
       this.fetchCalendarEvents(user, window),
     ]);
 
-    const bookingSlots = this.toTimeSlots(
-      bookings.map((b) => ({ start: b.startTime, end: b.endTime })),
-    );
+    const bookingSlots = this.toBusySlots(bookings);
     const availability = new DailyAvailability(bookingSlots, externalSlots);
 
     return availability.getTimeline(window.start, window.end);
@@ -74,7 +79,7 @@ export class AvailabilityService {
   private async fetchCalendarEvents(
     user: User,
     window: DayWindow,
-  ): Promise<TimeSlot[]> {
+  ): Promise<CalendarEvent[]> {
     try {
       return await this.calendarProvider.getEventsForDate(user, window);
     } catch (err) {
@@ -86,14 +91,20 @@ export class AvailabilityService {
     }
   }
 
-  private toTimeSlots(ranges: { start: Date; end: Date }[]): TimeSlot[] {
-    const slots: TimeSlot[] = [];
-    for (const range of ranges) {
+  private toBusySlots(bookings: Booking[]): BusySlot[] {
+    const slots: BusySlot[] = [];
+    for (const booking of bookings) {
       try {
-        slots.push(new TimeSlot({ start: range.start, end: range.end }));
+        slots.push({
+          slot: new TimeSlot({
+            start: booking.startTime,
+            end: booking.endTime,
+          }),
+          title: booking.title,
+        });
       } catch {
         this.logger.warn(
-          `Skipping invalid booking slot: ${range.start.toISOString()} – ${range.end.toISOString()}`,
+          `Skipping invalid booking slot: ${booking.startTime.toISOString()} – ${booking.endTime.toISOString()}`,
         );
       }
     }

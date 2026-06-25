@@ -1,19 +1,26 @@
 import { TimeSlot } from './time-slot.vo';
 
 export type SlotStatus = 'available' | 'booked' | 'external';
-export type TimelineBlock = { slot: TimeSlot; status: SlotStatus };
+export type BusySlot = { slot: TimeSlot; title: string };
+export type TimelineBlock = {
+  slot: TimeSlot;
+  status: SlotStatus;
+  title?: string;
+};
 
 export class DailyAvailability {
   private readonly busySlots: TimelineBlock[];
 
-  constructor(internalBookings: TimeSlot[], externalEvents: TimeSlot[]) {
-    const mappedBookings = internalBookings.map((slot) => ({
+  constructor(internalBookings: BusySlot[], externalEvents: BusySlot[]) {
+    const mappedBookings = internalBookings.map(({ slot, title }) => ({
       slot,
       status: 'booked' as const,
+      title,
     }));
-    const mappedExternal = externalEvents.map((slot) => ({
+    const mappedExternal = externalEvents.map(({ slot, title }) => ({
       slot,
       status: 'external' as const,
+      title,
     }));
 
     this.busySlots = [...mappedBookings, ...mappedExternal].sort(
@@ -58,6 +65,7 @@ export class DailyAvailability {
             end: new Date(actualEnd),
           }),
           status: busy.status,
+          title: busy.title,
         });
       }
 
