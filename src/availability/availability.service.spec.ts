@@ -141,7 +141,9 @@ describe('AvailabilityService', () => {
     expect(booked?.title).toBe('Dentist');
     expect(external?.title).toBe('Team sync');
     expect(
-      timeline.filter((b) => b.status === 'available').every((b) => !b.title),
+      timeline
+        .filter((b) => b.status === 'available')
+        .every((b) => !Object.prototype.hasOwnProperty.call(b, 'title')),
     ).toBe(true);
   });
 

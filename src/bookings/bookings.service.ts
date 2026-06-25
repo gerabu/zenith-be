@@ -4,10 +4,14 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Booking } from '@prisma/client';
-import { DailyAvailability } from '../availability/domain/daily-availability';
+import {
+  BusySlot,
+  DailyAvailability,
+} from '../availability/domain/daily-availability';
 import { TimeSlot } from '../availability/domain/time-slot.vo';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { USER_REPOSITORY } from '../auth/interfaces/user-repository.interface';
@@ -21,6 +25,8 @@ import type { IBookingRepository } from './interfaces/booking-repository.interfa
 
 @Injectable()
 export class BookingsService {
+  private readonly logger = new Logger(BookingsService.name);
+
   constructor(
     @Inject(BOOKING_REPOSITORY)
     private readonly bookingRepository: IBookingRepository,
@@ -68,10 +74,7 @@ export class BookingsService {
       this.calendarProvider.getEventsForDate(user, window),
     ]);
 
-    const internalSlots = internalBookings.map((b) => ({
-      slot: new TimeSlot({ start: b.startTime, end: b.endTime }),
-      title: b.title,
-    }));
+    const internalSlots = this.toBusySlots(internalBookings);
     const availability = new DailyAvailability(internalSlots, externalEvents);
 
     if (!availability.canBook(requestedSlot)) {
@@ -86,5 +89,25 @@ export class BookingsService {
       startTime: new Date(dto.startTime),
       endTime: new Date(dto.endTime),
     });
+  }
+
+  private toBusySlots(bookings: Booking[]): BusySlot[] {
+    const slots: BusySlot[] = [];
+    for (const booking of bookings) {
+      try {
+        slots.push({
+          slot: new TimeSlot({
+            start: booking.startTime,
+            end: booking.endTime,
+          }),
+          title: booking.title,
+        });
+      } catch {
+        this.logger.warn(
+          `Skipping invalid booking slot: ${booking.startTime.toISOString()} – ${booking.endTime.toISOString()}`,
+        );
+      }
+    }
+    return slots;
   }
 }
