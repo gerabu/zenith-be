@@ -5,6 +5,7 @@ jest.mock('jwks-rsa', () => ({ passportJwtSecret: () => () => undefined }));
 import { User } from '@prisma/client';
 import { AuthController } from './auth.controller';
 import { CalendarConnectionResponseDto } from './dto/calendar-connection-response.dto';
+import { CalendarConnectionStatusResponseDto } from './dto/calendar-connection-status-response.dto';
 import { ConnectCalendarDto } from './dto/connect-calendar.dto';
 import { AuthenticatedUser } from './interfaces/authenticated-user.interface';
 import { IUserRepository } from './interfaces/user-repository.interface';
@@ -51,6 +52,67 @@ describe('AuthController', () => {
       expect(
         (result as Record<string, unknown>).googleAccessToken,
       ).toBeUndefined();
+    });
+  });
+
+  describe('getCalendarConnection', () => {
+    it('returns calendarConnected true for a user whose connection is persisted', async () => {
+      const findMock = jest
+        .fn()
+        .mockResolvedValue({ ...baseUser, calendarConnected: true });
+      const repo = makeRepo({ findByGoogleId: findMock });
+      const controller = new AuthController(repo);
+
+      const result = await controller.getCalendarConnection(principal);
+
+      expect(findMock).toHaveBeenCalledWith(principal.googleId);
+      expect(result).toBeInstanceOf(CalendarConnectionStatusResponseDto);
+      expect(result.calendarConnected).toBe(true);
+    });
+
+    it('returns calendarConnected false for a user with no persisted connection', async () => {
+      const findMock = jest
+        .fn()
+        .mockResolvedValue({ ...baseUser, calendarConnected: false });
+      const repo = makeRepo({ findByGoogleId: findMock });
+      const controller = new AuthController(repo);
+
+      const result = await controller.getCalendarConnection(principal);
+
+      expect(result.calendarConnected).toBe(false);
+    });
+
+    it('returns calendarConnected false when the user has no record', async () => {
+      const findMock = jest.fn().mockResolvedValue(null);
+      const repo = makeRepo({ findByGoogleId: findMock });
+      const controller = new AuthController(repo);
+
+      const result = await controller.getCalendarConnection(principal);
+
+      expect(result.calendarConnected).toBe(false);
+    });
+
+    it('performs no write and exposes only calendarConnected', async () => {
+      const findMock = jest
+        .fn()
+        .mockResolvedValue({ ...baseUser, calendarConnected: true });
+      const upsertMock = jest.fn();
+      const updateMock = jest.fn();
+      const repo = makeRepo({
+        findByGoogleId: findMock,
+        upsert: upsertMock,
+        updateCalendarConnection: updateMock,
+      });
+      const controller = new AuthController(repo);
+
+      const result = await controller.getCalendarConnection(principal);
+
+      expect(upsertMock).not.toHaveBeenCalled();
+      expect(updateMock).not.toHaveBeenCalled();
+      expect(Object.keys({ ...result })).toEqual(['calendarConnected']);
+      expect((result as Record<string, unknown>).message).toBeUndefined();
+      expect((result as Record<string, unknown>).accessToken).toBeUndefined();
+      expect((result as Record<string, unknown>).refreshToken).toBeUndefined();
     });
   });
 
