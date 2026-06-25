@@ -12,6 +12,7 @@ import { CALENDAR_PROVIDER } from '../google-calendar/interfaces/calendar-provid
 import type { ICalendarProvider } from '../google-calendar/interfaces/calendar-provider.interface';
 import { USER_REPOSITORY } from '../auth/interfaces/user-repository.interface';
 import type { IUserRepository } from '../auth/interfaces/user-repository.interface';
+import { DayWindow, getDayWindow } from '../common/timezone/day-window';
 import { DailyAvailability, TimelineBlock } from './domain/daily-availability';
 import { TimeSlot } from './domain/time-slot.vo';
 
@@ -30,28 +31,22 @@ export class AvailabilityService {
   async getTimeline(
     googleId: string,
     dateStr: string,
+    tz?: string,
   ): Promise<TimelineBlock[]> {
-    const date = this.parseDate(dateStr);
+    this.assertValidDate(dateStr);
 
     const user = await this.userRepository.findByGoogleId(googleId);
     if (!user) {
       throw new NotFoundException('User not found; call /auth/sync first');
     }
 
-    const dayStart = new Date(
-      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-    );
-    const dayEnd = new Date(
-      Date.UTC(
-        date.getUTCFullYear(),
-        date.getUTCMonth(),
-        date.getUTCDate() + 1,
-      ),
-    );
+    // The day is defined in the viewer's timezone (default UTC) and the same
+    // window feeds the bookings query, the calendar fetch, and the timeline.
+    const window = getDayWindow(dateStr, tz);
 
     const [bookings, externalSlots] = await Promise.all([
-      this.bookingRepository.findByUserAndDate(user.id, date),
-      this.fetchCalendarEvents(user, date),
+      this.bookingRepository.findByUserAndDate(user.id, window),
+      this.fetchCalendarEvents(user, window),
     ]);
 
     const bookingSlots = this.toTimeSlots(
@@ -59,10 +54,10 @@ export class AvailabilityService {
     );
     const availability = new DailyAvailability(bookingSlots, externalSlots);
 
-    return availability.getTimeline(dayStart, dayEnd);
+    return availability.getTimeline(window.start, window.end);
   }
 
-  private parseDate(dateStr: string): Date {
+  private assertValidDate(dateStr: string): void {
     if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
       throw new BadRequestException(
         'date must be a valid ISO date in YYYY-MM-DD format',
@@ -74,15 +69,14 @@ export class AvailabilityService {
         'date must be a valid ISO date in YYYY-MM-DD format',
       );
     }
-    return parsed;
   }
 
   private async fetchCalendarEvents(
     user: User,
-    date: Date,
+    window: DayWindow,
   ): Promise<TimeSlot[]> {
     try {
-      return await this.calendarProvider.getEventsForDate(user, date);
+      return await this.calendarProvider.getEventsForDate(user, window);
     } catch (err) {
       this.logger.error(
         `Failed to fetch calendar events for user ${user.id}`,

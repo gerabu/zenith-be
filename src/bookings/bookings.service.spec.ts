@@ -104,11 +104,17 @@ describe('BookingsService', () => {
     it('fetches bookings and calendar events in parallel for the startTime UTC day', async () => {
       await service.create(principal, validDto);
 
-      const expectedDate = new Date(Date.UTC(2026, 5, 25));
-      expect(findByUserAndDate).toHaveBeenCalledWith('user-uuid', expectedDate);
+      const expectedWindow = {
+        start: new Date('2026-06-25T00:00:00.000Z'),
+        end: new Date('2026-06-26T00:00:00.000Z'),
+      };
+      expect(findByUserAndDate).toHaveBeenCalledWith(
+        'user-uuid',
+        expectedWindow,
+      );
       expect(getEventsForDate).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'user-uuid' }),
-        expectedDate,
+        expectedWindow,
       );
     });
   });

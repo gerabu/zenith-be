@@ -39,7 +39,10 @@ describe('GoogleCalendarService', () => {
   let service: GoogleCalendarService;
   let mockCalendar: jest.Mock;
   let mockEventsList: jest.Mock;
-  const date = new Date('2026-06-23T00:00:00.000Z');
+  const window = {
+    start: new Date('2026-06-23T00:00:00.000Z'),
+    end: new Date('2026-06-24T00:00:00.000Z'),
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -64,21 +67,21 @@ describe('GoogleCalendarService', () => {
   describe('short-circuit: no API call', () => {
     it('returns [] when calendarConnected is false', async () => {
       const user = makeUser({ calendarConnected: false });
-      const result = await service.getEventsForDate(user, date);
+      const result = await service.getEventsForDate(user, window);
       expect(result).toEqual([]);
       expect(mockCalendar).not.toHaveBeenCalled();
     });
 
     it('returns [] when googleAccessToken is null', async () => {
       const user = makeUser({ googleAccessToken: null });
-      const result = await service.getEventsForDate(user, date);
+      const result = await service.getEventsForDate(user, window);
       expect(result).toEqual([]);
       expect(mockCalendar).not.toHaveBeenCalled();
     });
 
     it('returns [] when googleRefreshToken is null', async () => {
       const user = makeUser({ googleRefreshToken: null });
-      const result = await service.getEventsForDate(user, date);
+      const result = await service.getEventsForDate(user, window);
       expect(result).toEqual([]);
       expect(mockCalendar).not.toHaveBeenCalled();
     });
@@ -96,7 +99,7 @@ describe('GoogleCalendarService', () => {
           ],
         },
       });
-      const result = await service.getEventsForDate(makeUser(), date);
+      const result = await service.getEventsForDate(makeUser(), window);
       expect(result).toHaveLength(1);
     });
 
@@ -108,7 +111,7 @@ describe('GoogleCalendarService', () => {
           ],
         },
       });
-      const result = await service.getEventsForDate(makeUser(), date);
+      const result = await service.getEventsForDate(makeUser(), window);
       expect(result).toHaveLength(0);
     });
 
@@ -123,13 +126,13 @@ describe('GoogleCalendarService', () => {
           ],
         },
       });
-      const result = await service.getEventsForDate(makeUser(), date);
+      const result = await service.getEventsForDate(makeUser(), window);
       expect(result).toHaveLength(0);
     });
 
     it('returns [] when the day has no events', async () => {
       mockEventsList.mockResolvedValue({ data: { items: [] } });
-      const result = await service.getEventsForDate(makeUser(), date);
+      const result = await service.getEventsForDate(makeUser(), window);
       expect(result).toEqual([]);
     });
 
@@ -149,35 +152,47 @@ describe('GoogleCalendarService', () => {
           ],
         },
       });
-      const result = await service.getEventsForDate(makeUser(), date);
+      const result = await service.getEventsForDate(makeUser(), window);
       expect(result).toHaveLength(1);
     });
   });
 
   describe('date window bounds', () => {
-    it('queries timeMin as start of day and timeMax as end of day', async () => {
+    it('passes the given window verbatim as timeMin/timeMax', async () => {
       mockEventsList.mockResolvedValue({ data: { items: [] } });
-      const targetDate = new Date('2026-06-23T12:00:00.000Z');
-      const expectedTimeMin = new Date(targetDate);
-      expectedTimeMin.setHours(0, 0, 0, 0);
-      const expectedTimeMax = new Date(targetDate);
-      expectedTimeMax.setHours(23, 59, 59, 999);
 
-      await service.getEventsForDate(makeUser(), targetDate);
+      await service.getEventsForDate(makeUser(), window);
 
       expect(mockEventsList).toHaveBeenCalledWith({
         calendarId: 'primary',
-        timeMin: expectedTimeMin.toISOString(),
-        timeMax: expectedTimeMax.toISOString(),
+        timeMin: window.start.toISOString(),
+        timeMax: window.end.toISOString(),
         singleEvents: true,
         orderBy: 'startTime',
       });
     });
 
+    it('uses the window unchanged regardless of the server local timezone', async () => {
+      mockEventsList.mockResolvedValue({ data: { items: [] } });
+      const tzWindow = {
+        start: new Date('2026-06-25T04:00:00.000Z'),
+        end: new Date('2026-06-26T04:00:00.000Z'),
+      };
+
+      await service.getEventsForDate(makeUser(), tzWindow);
+
+      expect(mockEventsList).toHaveBeenCalledWith(
+        expect.objectContaining({
+          timeMin: '2026-06-25T04:00:00.000Z',
+          timeMax: '2026-06-26T04:00:00.000Z',
+        }),
+      );
+    });
+
     it('uses calendarId primary', async () => {
       mockEventsList.mockResolvedValue({ data: { items: [] } });
 
-      await service.getEventsForDate(makeUser(), date);
+      await service.getEventsForDate(makeUser(), window);
 
       expect(mockEventsList).toHaveBeenCalledWith(
         expect.objectContaining({ calendarId: 'primary' }),
@@ -188,7 +203,7 @@ describe('GoogleCalendarService', () => {
   describe('API failure handling', () => {
     it('returns [] when the Google API throws', async () => {
       mockEventsList.mockRejectedValue(new Error('Token revoked'));
-      const result = await service.getEventsForDate(makeUser(), date);
+      const result = await service.getEventsForDate(makeUser(), window);
       expect(result).toEqual([]);
     });
   });

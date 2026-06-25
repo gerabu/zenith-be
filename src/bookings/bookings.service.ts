@@ -12,6 +12,7 @@ import { TimeSlot } from '../availability/domain/time-slot.vo';
 import { AuthenticatedUser } from '../auth/interfaces/authenticated-user.interface';
 import { USER_REPOSITORY } from '../auth/interfaces/user-repository.interface';
 import type { IUserRepository } from '../auth/interfaces/user-repository.interface';
+import { getDayWindow, toDateStringUtc } from '../common/timezone/day-window';
 import { CALENDAR_PROVIDER } from '../google-calendar/interfaces/calendar-provider.interface';
 import type { ICalendarProvider } from '../google-calendar/interfaces/calendar-provider.interface';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -60,13 +61,11 @@ export class BookingsService {
     }
 
     const { start } = requestedSlot.toPrimitives();
-    const date = new Date(
-      Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()),
-    );
+    const window = getDayWindow(toDateStringUtc(start));
 
     const [internalBookings, externalEvents] = await Promise.all([
-      this.bookingRepository.findByUserAndDate(user.id, date),
-      this.calendarProvider.getEventsForDate(user, date),
+      this.bookingRepository.findByUserAndDate(user.id, window),
+      this.calendarProvider.getEventsForDate(user, window),
     ]);
 
     const internalSlots = internalBookings.map(

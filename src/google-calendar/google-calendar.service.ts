@@ -3,13 +3,14 @@ import { ConfigService } from '@nestjs/config';
 import { User } from '@prisma/client';
 import { calendar_v3, google } from 'googleapis';
 import { TimeSlot } from '../availability/domain/time-slot.vo';
+import { DayWindow } from '../common/timezone/day-window';
 import { ICalendarProvider } from './interfaces/calendar-provider.interface';
 
 @Injectable()
 export class GoogleCalendarService implements ICalendarProvider {
   constructor(private readonly config: ConfigService) {}
 
-  async getEventsForDate(user: User, date: Date): Promise<TimeSlot[]> {
+  async getEventsForDate(user: User, window: DayWindow): Promise<TimeSlot[]> {
     if (
       !user.calendarConnected ||
       !user.googleAccessToken ||
@@ -28,11 +29,6 @@ export class GoogleCalendarService implements ICalendarProvider {
       refresh_token: user.googleRefreshToken,
     });
 
-    const timeMin = new Date(date);
-    timeMin.setHours(0, 0, 0, 0);
-    const timeMax = new Date(date);
-    timeMax.setHours(23, 59, 59, 999);
-
     let items: calendar_v3.Schema$Event[];
     try {
       const calendarApi = google.calendar({
@@ -41,8 +37,8 @@ export class GoogleCalendarService implements ICalendarProvider {
       });
       const response = await calendarApi.events.list({
         calendarId: 'primary',
-        timeMin: timeMin.toISOString(),
-        timeMax: timeMax.toISOString(),
+        timeMin: window.start.toISOString(),
+        timeMax: window.end.toISOString(),
         singleEvents: true,
         orderBy: 'startTime',
       });

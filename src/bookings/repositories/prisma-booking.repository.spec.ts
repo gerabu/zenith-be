@@ -31,20 +31,37 @@ describe('PrismaBookingRepository', () => {
 
   describe('findByUserAndDate', () => {
     const userId = 'user-uuid';
-    const date = new Date('2026-06-25T12:00:00Z');
+    const window = {
+      start: new Date('2026-06-25T00:00:00.000Z'),
+      end: new Date('2026-06-26T00:00:00.000Z'),
+    };
 
-    it('queries within the UTC calendar day boundaries', async () => {
+    it('queries within the provided window boundaries', async () => {
       findManyMock.mockResolvedValue([]);
 
-      await repository.findByUserAndDate(userId, date);
+      await repository.findByUserAndDate(userId, window);
 
       expect(findManyMock).toHaveBeenCalledWith({
         where: {
           userId,
-          startTime: {
-            gte: new Date('2026-06-25T00:00:00.000Z'),
-            lt: new Date('2026-06-26T00:00:00.000Z'),
-          },
+          startTime: { gte: window.start, lt: window.end },
+        },
+      });
+    });
+
+    it('passes a timezone-shifted window through verbatim', async () => {
+      findManyMock.mockResolvedValue([]);
+      const tzWindow = {
+        start: new Date('2026-06-25T04:00:00.000Z'),
+        end: new Date('2026-06-26T04:00:00.000Z'),
+      };
+
+      await repository.findByUserAndDate(userId, tzWindow);
+
+      expect(findManyMock).toHaveBeenCalledWith({
+        where: {
+          userId,
+          startTime: { gte: tzWindow.start, lt: tzWindow.end },
         },
       });
     });
@@ -53,7 +70,7 @@ describe('PrismaBookingRepository', () => {
       const booking = makeBooking();
       findManyMock.mockResolvedValue([booking]);
 
-      const result = await repository.findByUserAndDate(userId, date);
+      const result = await repository.findByUserAndDate(userId, window);
 
       expect(result).toEqual([booking]);
     });
@@ -61,7 +78,7 @@ describe('PrismaBookingRepository', () => {
     it('returns empty array when user has no bookings on the day', async () => {
       findManyMock.mockResolvedValue([]);
 
-      const result = await repository.findByUserAndDate(userId, date);
+      const result = await repository.findByUserAndDate(userId, window);
 
       expect(result).toEqual([]);
     });

@@ -1,4 +1,5 @@
 import { Booking } from '@prisma/client';
+import { DayWindow } from '../../common/timezone/day-window';
 
 export const BOOKING_REPOSITORY = Symbol('IBookingRepository');
 
@@ -10,6 +11,6 @@ export interface CreateBookingInput {
 }
 
 export interface IBookingRepository {
-  findByUserAndDate(userId: string, date: Date): Promise<Booking[]>;
+  findByUserAndDate(userId: string, window: DayWindow): Promise<Booking[]>;
   create(input: CreateBookingInput): Promise<Booking>;
 }
