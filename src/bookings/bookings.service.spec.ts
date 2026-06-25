@@ -211,10 +211,13 @@ describe('BookingsService', () => {
   describe('conflict with Google Calendar event (409)', () => {
     it('throws ConflictException when requested slot overlaps an external event', async () => {
       getEventsForDate.mockResolvedValue([
-        new TimeSlot({
-          start: new Date('2026-06-25T14:45:00Z'),
-          end: new Date('2026-06-25T15:45:00Z'),
-        }),
+        {
+          slot: new TimeSlot({
+            start: new Date('2026-06-25T14:45:00Z'),
+            end: new Date('2026-06-25T15:45:00Z'),
+          }),
+          title: 'Team sync',
+        },
       ]);
 
       await expect(service.create(principal, validDto)).rejects.toThrow(

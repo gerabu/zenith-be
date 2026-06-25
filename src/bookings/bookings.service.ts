@@ -68,9 +68,10 @@ export class BookingsService {
       this.calendarProvider.getEventsForDate(user, window),
     ]);
 
-    const internalSlots = internalBookings.map(
-      (b) => new TimeSlot({ start: b.startTime, end: b.endTime }),
-    );
+    const internalSlots = internalBookings.map((b) => ({
+      slot: new TimeSlot({ start: b.startTime, end: b.endTime }),
+      title: b.title,
+    }));
     const availability = new DailyAvailability(internalSlots, externalEvents);
 
     if (!availability.canBook(requestedSlot)) {

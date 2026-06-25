@@ -1,5 +1,7 @@
-import { DailyAvailability } from './daily-availability';
+import { BusySlot, DailyAvailability } from './daily-availability';
 import { TimeSlot } from './time-slot.vo';
+
+const busy = (slot: TimeSlot, title = 'Busy'): BusySlot => ({ slot, title });
 
 describe('DailyAvailability', () => {
   describe('canBook', () => {
@@ -18,16 +20,20 @@ describe('DailyAvailability', () => {
       expect(
         new DailyAvailability(
           [
-            new TimeSlot({
-              start: new Date('1975-09-15T14:00:00'),
-              end: new Date('1975-09-15T14:15:00'),
-            }),
+            busy(
+              new TimeSlot({
+                start: new Date('1975-09-15T14:00:00'),
+                end: new Date('1975-09-15T14:15:00'),
+              }),
+            ),
           ],
           [
-            new TimeSlot({
-              start: new Date('1975-09-15T14:15:00'),
-              end: new Date('1975-09-15T14:30:00'),
-            }),
+            busy(
+              new TimeSlot({
+                start: new Date('1975-09-15T14:15:00'),
+                end: new Date('1975-09-15T14:30:00'),
+              }),
+            ),
           ],
         ).canBook(
           new TimeSlot({
@@ -42,16 +48,20 @@ describe('DailyAvailability', () => {
       expect(
         new DailyAvailability(
           [
-            new TimeSlot({
-              start: new Date('1975-09-15T14:00:00'),
-              end: new Date('1975-09-15T14:15:00'),
-            }),
+            busy(
+              new TimeSlot({
+                start: new Date('1975-09-15T14:00:00'),
+                end: new Date('1975-09-15T14:15:00'),
+              }),
+            ),
           ],
           [
-            new TimeSlot({
-              start: new Date('1975-09-15T14:15:00'),
-              end: new Date('1975-09-15T14:30:00'),
-            }),
+            busy(
+              new TimeSlot({
+                start: new Date('1975-09-15T14:15:00'),
+                end: new Date('1975-09-15T14:30:00'),
+              }),
+            ),
           ],
         ).canBook(
           new TimeSlot({
@@ -81,12 +91,13 @@ describe('DailyAvailability', () => {
 
       expect(timeline).toHaveLength(1);
       expect(timeline[0].status).toBe('available');
+      expect(timeline[0].title).toBeUndefined();
       expect(timeline[0].slot.toPrimitives().start).toEqual(dayStart);
       expect(timeline[0].slot.toPrimitives().end).toEqual(dayEnd);
     });
 
     it('returns exactly 3 structured blocks when a single internal booking splits the day', () => {
-      const internalBookings = [createSlot('10:00', '11:30')];
+      const internalBookings = [busy(createSlot('10:00', '11:30'), 'Dentist')];
       const da = new DailyAvailability(internalBookings, []);
 
       const timeline = da.getTimeline(dayStart, dayEnd);
@@ -94,6 +105,7 @@ describe('DailyAvailability', () => {
       expect(timeline).toHaveLength(3);
 
       expect(timeline[0].status).toBe('available');
+      expect(timeline[0].title).toBeUndefined();
       expect(timeline[0].slot.toPrimitives().start.toISOString()).toBe(
         `${BASE_DATE}T00:00:00.000Z`,
       );
@@ -102,6 +114,7 @@ describe('DailyAvailability', () => {
       );
 
       expect(timeline[1].status).toBe('booked');
+      expect(timeline[1].title).toBe('Dentist');
       expect(timeline[1].slot.toPrimitives().start.toISOString()).toBe(
         `${BASE_DATE}T10:00:00.000Z`,
       );
@@ -110,6 +123,7 @@ describe('DailyAvailability', () => {
       );
 
       expect(timeline[2].status).toBe('available');
+      expect(timeline[2].title).toBeUndefined();
       expect(timeline[2].slot.toPrimitives().start.toISOString()).toBe(
         `${BASE_DATE}T11:30:00.000Z`,
       );
@@ -118,14 +132,15 @@ describe('DailyAvailability', () => {
       );
     });
 
-    it('returns the timeline with external status properly mapped for Google Calendar events', () => {
-      const googleEvents = [createSlot('14:00', '15:00')];
+    it('returns the timeline with external status and title properly mapped for Google Calendar events', () => {
+      const googleEvents = [busy(createSlot('14:00', '15:00'), 'Team sync')];
       const da = new DailyAvailability([], googleEvents);
 
       const timeline = da.getTimeline(dayStart, dayEnd);
 
       const externalBlock = timeline.find((b) => b.status === 'external');
       expect(externalBlock).toBeDefined();
+      expect(externalBlock!.title).toBe('Team sync');
       expect(externalBlock!.slot.toPrimitives().start.toISOString()).toBe(
         `${BASE_DATE}T14:00:00.000Z`,
       );
@@ -134,10 +149,21 @@ describe('DailyAvailability', () => {
       );
     });
 
+    it('preserves an empty title on a busy block whose source has no title', () => {
+      const googleEvents = [busy(createSlot('14:00', '15:00'), '')];
+      const da = new DailyAvailability([], googleEvents);
+
+      const timeline = da.getTimeline(dayStart, dayEnd);
+
+      const externalBlock = timeline.find((b) => b.status === 'external');
+      expect(externalBlock).toBeDefined();
+      expect(externalBlock!.title).toBe('');
+    });
+
     it('returns continuous booked segments without false available gaps for back-to-back events', () => {
       const internalBookings = [
-        createSlot('14:00', '15:00'),
-        createSlot('15:00', '16:00'),
+        busy(createSlot('14:00', '15:00')),
+        busy(createSlot('15:00', '16:00')),
       ];
       const da = new DailyAvailability(internalBookings, []);
 
@@ -164,7 +190,9 @@ describe('DailyAvailability', () => {
     });
 
     it('returns a single 24-hour external block when a Google event spans the entire day', () => {
-      const googleEvents = [new TimeSlot({ start: dayStart, end: dayEnd })];
+      const googleEvents = [
+        busy(new TimeSlot({ start: dayStart, end: dayEnd })),
+      ];
       const da = new DailyAvailability([], googleEvents);
 
       const timeline = da.getTimeline(dayStart, dayEnd);
@@ -176,10 +204,12 @@ describe('DailyAvailability', () => {
     });
 
     it('returns full 24-hour availability by completely ignoring events from previous or next days', () => {
-      const previousDayEvent = new TimeSlot({
-        start: new Date('1975-09-14T19:00:00.000Z'),
-        end: new Date('1975-09-14T21:00:00.000Z'),
-      });
+      const previousDayEvent = busy(
+        new TimeSlot({
+          start: new Date('1975-09-14T19:00:00.000Z'),
+          end: new Date('1975-09-14T21:00:00.000Z'),
+        }),
+      );
       const da = new DailyAvailability([], [previousDayEvent]);
 
       const timeline = da.getTimeline(dayStart, dayEnd);

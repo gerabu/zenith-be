@@ -1,10 +1,4 @@
-# daily-availability Specification
-
-## Purpose
-
-Expose the authenticated user's availability for a single calendar day by merging internal database bookings and Google Calendar events into a timeline of available and busy slots.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Fetch daily availability for a given date
 
@@ -47,13 +41,3 @@ The system SHALL expose `GET /availability/:date` (where `:date` is `YYYY-MM-DD`
 
 - **WHEN** `GET /availability/2024-06-15` is called without a valid bearer token
 - **THEN** the system responds with `401 Unauthorized` and `{ success: false, error: <message> }`
-
-### Requirement: Google Calendar errors degrade gracefully
-
-If the `ICalendarProvider` throws an error (e.g. API failure, expired credentials beyond graceful handling), the system SHALL treat external events as an empty list and still return a timeline based solely on internal bookings, rather than failing the whole request with 500.
-
-#### Scenario: Calendar API fails at request time
-
-- **WHEN** `GET /availability/2024-06-15` is called and `ICalendarProvider.getEventsForDate` throws an unexpected error
-- **THEN** the response is `{ success: true, data: <timeline based on internal bookings only> }`
-- **AND** the error is logged server-side

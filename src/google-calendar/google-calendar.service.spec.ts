@@ -87,8 +87,28 @@ describe('GoogleCalendarService', () => {
     });
   });
 
-  describe('event → TimeSlot mapping', () => {
-    it('maps a valid timed event to a TimeSlot', async () => {
+  describe('event → CalendarEvent mapping', () => {
+    it('maps a valid timed event to a slot and carries its summary as title', async () => {
+      mockEventsList.mockResolvedValue({
+        data: {
+          items: [
+            {
+              summary: 'Team sync',
+              start: { dateTime: '2026-06-23T09:00:00Z' },
+              end: { dateTime: '2026-06-23T09:30:00Z' },
+            },
+          ],
+        },
+      });
+      const result = await service.getEventsForDate(makeUser(), window);
+      expect(result).toHaveLength(1);
+      expect(result[0].title).toBe('Team sync');
+      expect(result[0].slot.toPrimitives().start.toISOString()).toBe(
+        '2026-06-23T09:00:00.000Z',
+      );
+    });
+
+    it('falls back to an empty title when the event has no summary', async () => {
       mockEventsList.mockResolvedValue({
         data: {
           items: [
@@ -101,6 +121,7 @@ describe('GoogleCalendarService', () => {
       });
       const result = await service.getEventsForDate(makeUser(), window);
       expect(result).toHaveLength(1);
+      expect(result[0].title).toBe('');
     });
 
     it('skips all-day events (no dateTime, only date)', async () => {
