@@ -55,7 +55,9 @@ const validDto: CreateBookingDto = {
 describe('BookingsService', () => {
   let service: BookingsService;
   let findByUserAndDate: jest.Mock;
+  let bookingFindById: jest.Mock;
   let bookingCreate: jest.Mock;
+  let bookingDelete: jest.Mock;
   let getEventsForDate: jest.Mock;
   let findByGoogleId: jest.Mock;
   let bookingRepo: jest.Mocked<IBookingRepository>;
@@ -64,13 +66,17 @@ describe('BookingsService', () => {
 
   beforeEach(() => {
     findByUserAndDate = jest.fn().mockResolvedValue([]);
+    bookingFindById = jest.fn().mockResolvedValue(makeBooking());
     bookingCreate = jest.fn().mockResolvedValue(makeBooking());
+    bookingDelete = jest.fn().mockResolvedValue(undefined);
     getEventsForDate = jest.fn().mockResolvedValue([]);
     findByGoogleId = jest.fn().mockResolvedValue(makeUser());
 
     bookingRepo = {
       findByUserAndDate,
+      findById: bookingFindById,
       create: bookingCreate,
+      delete: bookingDelete,
     };
 
     calendarProvider = {
@@ -224,6 +230,46 @@ describe('BookingsService', () => {
         ConflictException,
       );
       expect(bookingCreate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('delete', () => {
+    it('deletes a booking the user owns', async () => {
+      bookingFindById.mockResolvedValue(makeBooking({ id: 'booking-uuid' }));
+
+      await service.delete(principal, 'booking-uuid');
+
+      expect(bookingDelete).toHaveBeenCalledWith('booking-uuid');
+    });
+
+    it('throws NotFoundException when the booking does not exist', async () => {
+      bookingFindById.mockResolvedValue(null);
+
+      await expect(service.delete(principal, 'missing-uuid')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(bookingDelete).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when the booking belongs to another user', async () => {
+      bookingFindById.mockResolvedValue(
+        makeBooking({ id: 'booking-uuid', userId: 'someone-else' }),
+      );
+
+      await expect(service.delete(principal, 'booking-uuid')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(bookingDelete).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when the caller has no synced user', async () => {
+      findByGoogleId.mockResolvedValue(null);
+
+      await expect(service.delete(principal, 'booking-uuid')).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(bookingFindById).not.toHaveBeenCalled();
+      expect(bookingDelete).not.toHaveBeenCalled();
     });
   });
 });

@@ -101,6 +101,7 @@ export class AvailabilityService {
             end: booking.endTime,
           }),
           title: booking.title,
+          id: booking.id,
         });
       } catch {
         this.logger.warn(

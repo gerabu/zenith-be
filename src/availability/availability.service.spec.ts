@@ -162,4 +162,35 @@ describe('AvailabilityService', () => {
     expect(booked).toBeDefined();
     expect(booked?.title).toBe('');
   });
+
+  it('exposes the internal booking id on booked blocks only', async () => {
+    findByUserAndDate.mockResolvedValue([
+      makeBooking({
+        id: 'booking-uuid',
+        startTime: new Date('2026-06-25T09:00:00.000Z'),
+        endTime: new Date('2026-06-25T10:00:00.000Z'),
+      }),
+    ]);
+    getEventsForDate.mockResolvedValue([
+      {
+        slot: new TimeSlot({
+          start: new Date('2026-06-25T14:00:00.000Z'),
+          end: new Date('2026-06-25T15:00:00.000Z'),
+        }),
+        title: 'Team sync',
+      },
+    ]);
+
+    const timeline = await service.getTimeline('google-sub-123', '2026-06-25');
+
+    expect(timeline.find((b) => b.status === 'booked')?.id).toBe(
+      'booking-uuid',
+    );
+    expect(timeline.find((b) => b.status === 'external')?.id).toBeUndefined();
+    expect(
+      timeline
+        .filter((b) => b.status === 'available')
+        .every((b) => b.id === undefined),
+    ).toBe(true);
+  });
 });

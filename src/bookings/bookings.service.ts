@@ -91,6 +91,22 @@ export class BookingsService {
     });
   }
 
+  async delete(principal: AuthenticatedUser, bookingId: string): Promise<void> {
+    const user = await this.userRepository.findByGoogleId(principal.googleId);
+    if (!user) {
+      throw new NotFoundException('User not found; call /auth/sync first');
+    }
+
+    const booking = await this.bookingRepository.findById(bookingId);
+    // A booking owned by someone else is reported as not found so booking
+    // existence is never disclosed to non-owners.
+    if (!booking || booking.userId !== user.id) {
+      throw new NotFoundException('Booking not found');
+    }
+
+    await this.bookingRepository.delete(bookingId);
+  }
+
   private toBusySlots(bookings: Booking[]): BusySlot[] {
     const slots: BusySlot[] = [];
     for (const booking of bookings) {

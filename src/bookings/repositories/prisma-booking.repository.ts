@@ -20,7 +20,15 @@ export class PrismaBookingRepository implements IBookingRepository {
     });
   }
 
+  findById(id: string): Promise<Booking | null> {
+    return this.prisma.booking.findUnique({ where: { id } });
+  }
+
   create(input: CreateBookingInput): Promise<Booking> {
     return this.prisma.booking.create({ data: input });
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.booking.delete({ where: { id } });
   }
 }
