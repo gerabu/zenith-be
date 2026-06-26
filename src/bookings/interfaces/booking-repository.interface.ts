@@ -12,5 +12,7 @@ export interface CreateBookingInput {
 
 export interface IBookingRepository {
   findByUserAndDate(userId: string, window: DayWindow): Promise<Booking[]>;
+  findById(id: string): Promise<Booking | null>;
   create(input: CreateBookingInput): Promise<Booking>;
+  delete(id: string): Promise<void>;
 }

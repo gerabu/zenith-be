@@ -17,14 +17,23 @@ function makeBooking(overrides: Partial<Booking> = {}): Booking {
 
 describe('PrismaBookingRepository', () => {
   let findManyMock: jest.Mock;
+  let findUniqueMock: jest.Mock;
   let createMock: jest.Mock;
+  let deleteMock: jest.Mock;
   let repository: PrismaBookingRepository;
 
   beforeEach(() => {
     findManyMock = jest.fn();
+    findUniqueMock = jest.fn();
     createMock = jest.fn();
+    deleteMock = jest.fn();
     const prisma = {
-      booking: { findMany: findManyMock, create: createMock },
+      booking: {
+        findMany: findManyMock,
+        findUnique: findUniqueMock,
+        create: createMock,
+        delete: deleteMock,
+      },
     } as unknown as PrismaService;
     repository = new PrismaBookingRepository(prisma);
   });
@@ -109,6 +118,40 @@ describe('PrismaBookingRepository', () => {
 
       expect(result.id).toBe('generated-uuid');
       expect(result).toEqual(created);
+    });
+  });
+
+  describe('findById', () => {
+    it('queries prisma.booking.findUnique by id', async () => {
+      const booking = makeBooking();
+      findUniqueMock.mockResolvedValue(booking);
+
+      const result = await repository.findById('booking-uuid');
+
+      expect(findUniqueMock).toHaveBeenCalledWith({
+        where: { id: 'booking-uuid' },
+      });
+      expect(result).toEqual(booking);
+    });
+
+    it('returns null when no booking matches the id', async () => {
+      findUniqueMock.mockResolvedValue(null);
+
+      const result = await repository.findById('missing-uuid');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('delete', () => {
+    it('calls prisma.booking.delete with the provided id', async () => {
+      deleteMock.mockResolvedValue(makeBooking());
+
+      await repository.delete('booking-uuid');
+
+      expect(deleteMock).toHaveBeenCalledWith({
+        where: { id: 'booking-uuid' },
+      });
     });
   });
 });

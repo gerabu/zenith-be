@@ -1,7 +1,11 @@
 import { BusySlot, DailyAvailability } from './daily-availability';
 import { TimeSlot } from './time-slot.vo';
 
-const busy = (slot: TimeSlot, title = 'Busy'): BusySlot => ({ slot, title });
+const busy = (slot: TimeSlot, title = 'Busy', id?: string): BusySlot => ({
+  slot,
+  title,
+  id,
+});
 
 describe('DailyAvailability', () => {
   describe('canBook', () => {
@@ -130,6 +134,30 @@ describe('DailyAvailability', () => {
       expect(timeline[2].slot.toPrimitives().end.toISOString()).toBe(
         `${BASE_DATE}T23:59:59.999Z`,
       );
+    });
+
+    it('exposes the booking id on booked blocks while available gaps carry none', () => {
+      const internalBookings = [
+        busy(createSlot('10:00', '11:30'), 'Dentist', 'booking-uuid'),
+      ];
+      const da = new DailyAvailability(internalBookings, []);
+
+      const timeline = da.getTimeline(dayStart, dayEnd);
+
+      expect(timeline[1].status).toBe('booked');
+      expect(timeline[1].id).toBe('booking-uuid');
+      expect(timeline[0].id).toBeUndefined();
+      expect(timeline[2].id).toBeUndefined();
+    });
+
+    it('leaves external blocks without an id', () => {
+      const googleEvents = [busy(createSlot('14:00', '15:00'), 'Team sync')];
+      const da = new DailyAvailability([], googleEvents);
+
+      const timeline = da.getTimeline(dayStart, dayEnd);
+
+      const externalBlock = timeline.find((b) => b.status === 'external');
+      expect(externalBlock!.id).toBeUndefined();
     });
 
     it('returns the timeline with external status and title properly mapped for Google Calendar events', () => {

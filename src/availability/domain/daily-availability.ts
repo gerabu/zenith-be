@@ -1,21 +1,23 @@
 import { TimeSlot } from './time-slot.vo';
 
 export type SlotStatus = 'available' | 'booked' | 'external';
-export type BusySlot = { slot: TimeSlot; title: string };
+export type BusySlot = { slot: TimeSlot; title: string; id?: string };
 export type TimelineBlock = {
   slot: TimeSlot;
   status: SlotStatus;
   title?: string;
+  id?: string;
 };
 
 export class DailyAvailability {
   private readonly busySlots: TimelineBlock[];
 
   constructor(internalBookings: BusySlot[], externalEvents: BusySlot[]) {
-    const mappedBookings = internalBookings.map(({ slot, title }) => ({
+    const mappedBookings = internalBookings.map(({ slot, title, id }) => ({
       slot,
       status: 'booked' as const,
       title,
+      id,
     }));
     const mappedExternal = externalEvents.map(({ slot, title }) => ({
       slot,
@@ -66,6 +68,9 @@ export class DailyAvailability {
           }),
           status: busy.status,
           title: busy.title,
+          // Only internal bookings carry an id; external events leave it
+          // undefined so the field is omitted from the response.
+          id: busy.id,
         });
       }
 

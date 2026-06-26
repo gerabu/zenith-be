@@ -1,8 +1,10 @@
 import {
   Body,
   Controller,
+  Delete,
   HttpCode,
   HttpStatus,
+  Param,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -26,5 +28,14 @@ export class BookingsController {
   ): Promise<BookingResponseDto> {
     const booking = await this.bookingsService.create(principal, dto);
     return BookingResponseDto.fromBooking(booking);
+  }
+
+  @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async remove(
+    @CurrentUser() principal: AuthenticatedUser,
+    @Param('id') id: string,
+  ): Promise<void> {
+    await this.bookingsService.delete(principal, id);
   }
 }
