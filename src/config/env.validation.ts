@@ -27,6 +27,16 @@ export class EnvironmentVariables {
   @IsOptional()
   @IsString()
   GOOGLE_JWKS_URI?: string;
+
+  // Optional Basic-Auth credentials gating the Swagger docs. When either is
+  // unset the docs routes are not mounted at all (fail-closed).
+  @IsOptional()
+  @IsString()
+  SWAGGER_USER?: string;
+
+  @IsOptional()
+  @IsString()
+  SWAGGER_PASSWORD?: string;
 }
 
 export function validateEnv(
