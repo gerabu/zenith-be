@@ -1,98 +1,207 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Zenith — Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A **NestJS + TypeScript** booking API for a Google Calendar scheduling app. Users authenticate with Google, book named time slots, and the system guarantees a booking never collides with **either** an existing booking in the database **or** a real event on the user's Google Calendar.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+> This repository is also a demonstration of how I build software: **AI-assisted, Spec-Driven Development** using the [OpenSpec](https://github.com/Fission-AI/OpenSpec) core flow, with every load-bearing decision captured in **Architecture Decision Records (ADRs)** before a line of code is written.
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Why this repo is worth a look
 
-## Project setup
+If you're evaluating engineering ability, these are the things I'd point you to first:
 
-```bash
-$ pnpm install
+- **Spec-Driven Development with AI as a force multiplier.** Every non-trivial feature went through an OpenSpec proposal → design → tasks → implementation → archive cycle. The intent, trade-offs, and acceptance criteria exist *before* the code, so the AI accelerates implementation without owning the architecture. The full history lives in [`openspec/changes/archive/`](openspec/changes/archive/).
+- **Documented decision-making.** The interesting product/engineering judgment calls are written down as [ADRs](docs/adr/) — not just *what* was built, but *why*, *what was rejected*, and *what the trade-off costs*.
+- **Pragmatic Clean Architecture.** Vertical slices, the Repository Pattern behind interfaces, a strict uniform response envelope, and a stateless OAuth resource-server model — applied deliberately, not dogmatically.
+
+---
+
+## Tech stack
+
+| Concern | Choice |
+| --- | --- |
+| Framework | NestJS (Express) |
+| Language | TypeScript |
+| Database | PostgreSQL (via Docker Compose) |
+| ORM | Prisma |
+| Auth | Google OAuth 2.0 — backend validates Google **ID tokens** as JWTs (`passport-jwt` + JWKS) |
+| Validation | `class-validator` / `class-transformer` behind a global `ValidationPipe` |
+| API docs | Swagger / OpenAPI (Basic-Auth protected) |
+| Testing | Jest (unit + e2e) |
+| Tooling | pnpm, ESLint, Prettier |
+
+---
+
+## AI-Assisted, Spec-Driven Development with OpenSpec
+
+This project deliberately treats **the specification as the source of truth and the AI as the implementer**, rather than letting an AI improvise an architecture. The workflow uses the OpenSpec core flow:
+
+```
+explore → propose → (design + spec + tasks) → apply → archive
 ```
 
-## Compile and run the project
+1. **Propose** — each feature starts as a change proposal describing the *what* and *why*.
+2. **Design** — a `design.md` records the technical decisions, alternatives considered, risks, and a migration plan.
+3. **Spec** — capability specs define the behavioral contract.
+4. **Tasks** — implementation is broken into reviewable, scoped units.
+5. **Apply & Archive** — once shipped, the change is archived as a permanent, auditable record.
 
-```bash
-# development
-$ pnpm run start
+The archived changes read as a changelog of *reasoning*, not just commits:
 
-# watch mode
-$ pnpm run start:dev
+| Change | What it added |
+| --- | --- |
+| `add-google-auth` | Stateless Google ID-token validation, `IUserRepository`, `/auth/sync` |
+| `add-google-calendar-events` | `ICalendarProvider` adapter over the Google Calendar API |
+| `get-daily-availability` | Rich `TimeSlot` / `DailyAvailability` domain models |
+| `create-booking` | Conflict-checked booking command (DB **and** calendar) |
+| `add-calendar-connection-endpoint` | "Optional but blocking" calendar connection |
+| `add-calendar-connection-status-endpoint` | FE state-driving connection status |
+| `add-delete-booking` | Owner-scoped booking deletion |
+| `timezone-aware-availability` | Timezone-correct slot generation |
+| `add-timeline-block-title` | Named time blocks on availability |
+| `add-swagger-api-docs` | Password-protected OpenAPI documentation |
 
-# production mode
-$ pnpm run start:prod
+The conventions that bind all of this together (response envelope, repository pattern, vertical slices, validation) are codified in [`ARCHITECTURE.md`](ARCHITECTURE.md) and fed to the AI as guardrails via [`CLAUDE.md`](CLAUDE.md).
+
+---
+
+## Architecture Decision Records
+
+The judgment calls that shaped the product live in [`docs/adr/`](docs/adr/). A few highlights:
+
+- **[ADR-001 — Google Calendar Connection as "Optional but Blocking"](docs/adr/adr-001.md)**
+  Authentication (Google login) is decoupled from authorization/integration (Calendar API access). Login requires only basic profile scopes; granting Calendar access is *not* forced at signup, but it **is** a hard prerequisite for creating a booking. This follows the principle of least privilege and reduces onboarding drop-off, while honoring the core domain rule that bookings must be validated against the calendar.
+
+- **[ADR-002 — Soft Onboarding & Proactive UI Flow](docs/adr/adr-002.md)**
+  Because a user can exist in a "logged in but not connected" state, the backend signals that state explicitly (`GET /auth/calendar-connection`) so the frontend can disable slots and offer a connect CTA — turning a backend `403` into guidance rather than an "error-by-design" experience.
+
+- **[ADR-003 — Primary Calendar Only](docs/adr/adr-003.md)**
+  Conflict validation checks only the user's **primary** Google Calendar via the `'primary'` alias — a single low-latency API call instead of multi-calendar aggregation. A scoped, conscious MVP trade-off with the future iteration path noted.
+
+---
+
+## Authentication & Authorization flow
+
+The backend is a **stateless resource server**. It never participates in the OAuth redirect dance — that is owned by the Next.js frontend. The backend's job is to *verify* credentials it receives and enforce domain authorization.
+
+### Authentication (who you are)
+
+```
+┌──────────┐   1. Google OAuth login (redirect dance)   ┌────────────┐
+│ Frontend │ ─────────────────────────────────────────▶ │   Google   │
+│ (Next.js)│ ◀───────────── ID token (JWT) ───────────── │            │
+└────┬─────┘                                             └────────────┘
+     │
+     │ 2. Every request: Authorization: Bearer <Google ID token>
+     ▼
+┌──────────────────────────────────────────────────────────────────┐
+│ Backend (NestJS)                                                   │
+│   JwtAuthGuard → passport-jwt strategy                             │
+│   • Fetches Google's public keys via JWKS (cached, rotation-safe) │
+│   • Verifies RS256 signature, issuer, audience (GOOGLE_CLIENT_ID), │
+│     and expiry — fully offline, no per-request call to Google      │
+│   • validate() returns a lightweight principal (googleId, email)  │
+│   • @CurrentUser() exposes it to controllers                      │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-## Run tests
+- The frontend sends Google's **ID token** (a signed JWT) as a bearer credential — *not* the opaque access token — so the backend can verify it cryptographically against Google's JWKS with **no network round-trip per request**. (See the [auth design notes](openspec/changes/archive/2026-06-23-add-google-auth/design.md).)
+- **`GET /auth/sync`** — called once by the frontend right after login. Idempotently upserts the `User` row from the verified token claims. Per-request auth stays read-only and fast; user creation is an explicit step keyed on the stable Google `sub` claim.
 
-```bash
-# unit tests
-$ pnpm run test
+### Authorization (what you're allowed to do)
 
-# e2e tests
-$ pnpm run test:e2e
+Authorization is enforced as an explicit domain rule, per ADR-001:
 
-# test coverage
-$ pnpm run test:cov
+```
+PATCH /auth/calendar-connection   → user grants Calendar access (tokens stored)
+GET   /auth/calendar-connection   → FE reads connection state to drive the UI
+POST  /bookings                   → requires calendarConnected === true
+                                    ↳ 403 if not connected (FE turns this into a CTA)
+                                    ↳ 409 if the slot overlaps a DB booking OR a calendar event
 ```
 
-## Deployment
+The **core domain guarantee**: a booking is rejected if it overlaps an existing database booking **or** an event on the user's primary Google Calendar — and the calendar is checked at *booking-confirmation time*, not only when listing availability.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+---
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+## API surface
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+All responses follow a strict, mutually-exclusive envelope, enforced globally (response interceptor for success, exception filter for errors):
+
+```ts
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;    // present only when success === true
+  error?: string; // present only when success === false
+}
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+| Method & path | Purpose |
+| --- | --- |
+| `GET /auth/sync` | Idempotent user upsert from token claims |
+| `GET /auth/calendar-connection` | Report calendar connection status |
+| `PATCH /auth/calendar-connection` | Store Google Calendar OAuth tokens |
+| `GET /availability/:date` | Daily availability (timezone-aware) |
+| `POST /bookings` | Create a conflict-checked booking |
+| `DELETE /bookings/:id` | Delete an owned booking |
+| `GET /docs` | Swagger UI (Basic-Auth protected) |
 
-## Resources
+---
 
-Check out a few resources that may come in handy when working with NestJS:
+## Getting started
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+Package manager is **pnpm**.
 
-## Support
+```bash
+# 1. Install dependencies
+pnpm install
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+# 2. Configure environment
+cp .env.example .env   # then fill in GOOGLE_CLIENT_ID, Swagger creds, etc.
 
-## Stay in touch
+# 3. Start PostgreSQL
+docker compose up -d
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+# 4. Apply the database schema
+pnpm prisma migrate dev
 
-## License
+# 5. Run the API (watch mode, http://localhost:3000)
+pnpm start:dev
+```
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Interactive API docs are served at **`/docs`** (gated by `SWAGGER_USER` / `SWAGGER_PASSWORD`).
+
+### Tests
+
+```bash
+pnpm test          # unit specs
+pnpm test:e2e      # end-to-end
+pnpm test:cov      # coverage
+```
+
+### Quality
+
+```bash
+pnpm lint          # eslint --fix
+pnpm format        # prettier --write
+```
+
+---
+
+## Repository map
+
+```
+src/
+ ├── common/            # Global infra: response interceptor, exception filter,
+ │                      #   @CurrentUser(), Swagger envelope decorators
+ ├── prisma/            # PrismaModule + PrismaService
+ ├── auth/              # Google JWT strategy, JwtAuthGuard, IUserRepository, /auth/*
+ ├── google-calendar/   # ICalendarProvider adapter over the Google Calendar API
+ ├── availability/      # Core domain: TimeSlot / DailyAvailability, GET /availability
+ └── bookings/          # Conflict-checked commands: POST / DELETE /bookings
+
+docs/adr/               # Architecture Decision Records
+openspec/               # Spec-driven change proposals, specs, and archive
+ARCHITECTURE.md         # Source-of-truth conventions
+CLAUDE.md               # AI guardrails derived from ARCHITECTURE.md
+```
